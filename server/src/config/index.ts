@@ -1,11 +1,5 @@
 import { Logger } from '@nestjs/common';
-import {
-  IsArray,
-  IsBoolean,
-  IsInt,
-  IsString,
-  validateSync,
-} from 'class-validator';
+import { IsBoolean, IsInt, IsString, validateSync } from 'class-validator';
 
 import { config } from 'dotenv';
 config();

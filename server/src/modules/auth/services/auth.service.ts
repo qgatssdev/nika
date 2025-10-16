@@ -67,13 +67,7 @@ export class AuthService {
     try {
       const user = await this.userRepository
         .createQueryBuilder('user')
-        .where(
-          'user.isActive = :isActive AND (user.phoneNumber = :identifier OR LOWER(user.username) = LOWER(:identifier))',
-          {
-            isActive: true,
-            email: email,
-          },
-        )
+        .where('LOWER(user.email) = LOWER(:email)', { email })
         .getOne();
 
       if (!user) {
@@ -95,7 +89,6 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          username: user.username,
           firstName: user.firstName,
           lastName: user.lastName,
         },
