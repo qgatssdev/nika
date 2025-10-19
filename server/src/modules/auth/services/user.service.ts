@@ -17,7 +17,6 @@ export class UserService {
     try {
       const authenticatedUser = await this.userRepository.findOne({
         where: { id: user.id },
-        select: ['id', 'email', 'firstName', 'lastName'],
       });
 
       return authenticatedUser;

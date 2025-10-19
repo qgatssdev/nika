@@ -6,7 +6,6 @@ import {
   ClassSerializerInterceptor,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import * as cors from 'cors';
 import { Config } from './config';
 
 async function bootstrap() {
@@ -19,9 +18,9 @@ async function bootstrap() {
   app.setGlobalPrefix(globalPrefix);
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   app.useGlobalInterceptors(new ClassSerializerInterceptor(app.get(Reflector)));
-  app.use(cors());
+  app.enableCors();
 
   const port = Config.PORT || 3000;
-  await app.listen(port);
+  await app.listen(port).then(() => console.log('Listening on', port));
 }
 bootstrap();

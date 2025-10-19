@@ -12,7 +12,7 @@ import { LoginRequestDto } from '../dto/login-request.dto';
 import { SignUpDto } from '../dto/signup.dto';
 import { User } from '../entity/user.entity';
 import { UserRepository } from '../repository/user.repository';
-
+import { ReferralService } from 'src/modules/referral/services/referral.service';
 @Injectable()
 export class AuthService {
   private logger: Logger;
@@ -23,27 +23,57 @@ export class AuthService {
   @Inject()
   private readonly userRepository: UserRepository;
 
-  public async signUp({ email, password, firstName, lastName }: SignUpDto) {
+  @Inject()
+  private readonly referralService: ReferralService;
+
+  public async signUp({
+    email,
+    password,
+    firstName,
+    lastName,
+    referralCode,
+  }: SignUpDto) {
     try {
       const userExists = await this.userRepository.findOne({
         where: { email },
       });
-      if (userExists) {
-        throw new BadRequestException('User already exists');
-      }
-      const hashedPassword = await PasswordEncoder.hash(password);
 
-      const user = this.userRepository.create({
+      if (userExists) throw new BadRequestException('User already exists');
+
+      if (referralCode) {
+        const isValid =
+          await this.referralService.validateReferralCode(referralCode);
+        if (!isValid) throw new BadRequestException('Invalid referral code');
+      }
+
+      const hashedPassword = await PasswordEncoder.hash(password);
+      const newUser = this.userRepository.create({
         email,
         password: hashedPassword,
         firstName,
         lastName,
       });
 
-      await this.userRepository.save(user);
+      await this.userRepository.save(newUser);
 
+      if (referralCode) {
+        await this.referralService.registerReferral(referralCode, newUser.id);
+      }
+
+      const { referralCode: generatedCode } =
+        await this.referralService.generateReferralCode(newUser.id);
+
+      const token = this.signToken(newUser);
       return {
         message: 'User created successfully',
+        token,
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          referralCode: generatedCode,
+        },
       };
     } catch (error) {
       handleErrorCatch(error);

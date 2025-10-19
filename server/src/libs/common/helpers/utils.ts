@@ -4,6 +4,8 @@ import {
   HttpException,
   Logger,
 } from '@nestjs/common';
+import { v4 as uuidv4 } from 'uuid';
+import { User } from 'src/modules/auth/entity/user.entity';
 
 const handleDbErrors = (err) => {
   //foreign key voiation error
@@ -54,4 +56,12 @@ export const handleErrorCatch = (err) => {
     },
     HttpStatus.INTERNAL_SERVER_ERROR,
   );
+};
+
+export const createReferralCode = (user: User): string => {
+  const base = user.firstName
+    ? user.firstName.substring(0, 3).toUpperCase()
+    : 'USR';
+  const randomSuffix = uuidv4().split('-')[0].toUpperCase();
+  return `${base}-${randomSuffix}`;
 };

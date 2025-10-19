@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Global, Module, Logger } from '@nestjs/common';
 import { FactoryProvider } from '@nestjs/common/interfaces';
 import * as path from 'path';
 import * as typeorm from 'typeorm';
@@ -44,8 +44,11 @@ const databaseProvider = {
 const entityManagerProvider: FactoryProvider = {
   provide: typeorm.EntityManager,
   useFactory: async (cxn: typeorm.Connection) => {
+    const logger = new Logger('DatabaseModule');
     if (!cxn.isInitialized) {
+      logger.log('Connecting to database...');
       await cxn.initialize();
+      logger.log('Database connected successfully');
     }
     const manager = cxn.createEntityManager();
     return onModuleDestroy(manager, (m) => m.release());
