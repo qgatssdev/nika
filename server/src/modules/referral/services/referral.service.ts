@@ -10,6 +10,14 @@ import { handleErrorCatch } from 'src/libs/common/helpers/utils';
 import { createReferralCode } from 'src/libs/common/helpers/utils';
 import { ReferralRepository } from '../repository/referral.repository';
 
+type LevelKey = 'level1' | 'level2' | 'level3';
+type ReferralNode = {
+  id: string;
+  email: string;
+  name: string;
+  referralCode: string;
+};
+
 @Injectable()
 export class ReferralService {
   private logger: Logger;
@@ -55,12 +63,14 @@ export class ReferralService {
     try {
       const newUser = await this.userRepository.findOne({
         where: { id: newUserId },
+        relations: ['referrer'],
       });
 
       if (!newUser) throw new NotFoundException('User not found');
 
       const referrer = await this.userRepository.findOne({
         where: { referralCode },
+        relations: ['referrer'],
       });
 
       if (!referrer) throw new BadRequestException('Invalid referral code');
@@ -73,11 +83,15 @@ export class ReferralService {
         throw new BadRequestException('User already has a referrer');
       }
 
-      const currentReferralCount = await this.referralRepository.count({
-        where: { referrer },
-      });
+      let level = 1;
+      let currentReferrer = referrer;
 
-      if (currentReferralCount >= 3) {
+      while (currentReferrer.referrer && level < 3) {
+        currentReferrer = currentReferrer.referrer;
+        level++;
+      }
+
+      if (level > 3) {
         this.logger.warn(
           `Referral depth exceeded for user ${referrer.id}. Proceeding without referral link.`,
         );
@@ -90,13 +104,13 @@ export class ReferralService {
       await this.referralRepository.save({
         referrer,
         referee: newUser,
-        level: currentReferralCount + 1,
+        level,
       });
 
       newUser.referrer = referrer;
       await this.userRepository.save(newUser);
 
-      return { message: 'Referral registered successfully' };
+      return { message: 'Referral registered successfully', level };
     } catch (error) {
       handleErrorCatch(error);
     }
@@ -107,5 +121,51 @@ export class ReferralService {
       where: { referralCode },
     });
     return !!referrer;
+  }
+
+  public async getReferralTree(userId: string) {
+    try {
+      const user = await this.userRepository.findOne({
+        where: { id: userId },
+        relations: ['referralsMade', 'referralsMade.referee'],
+      });
+
+      if (!user) throw new NotFoundException('User not found');
+
+      const result: Record<LevelKey, ReferralNode[]> = {
+        level1: [],
+        level2: [],
+        level3: [],
+      };
+
+      const traverse = async (referrerId: string, currentLevel: number) => {
+        if (currentLevel > 3) return;
+
+        const referrals = await this.referralRepository.findAll({
+          where: { referrer: { id: referrerId } },
+          relations: ['referee'],
+        });
+
+        if (!referrals.length) return;
+
+        for (const referral of referrals) {
+          const levelKey = `level${currentLevel}` as LevelKey;
+          result[levelKey].push({
+            id: referral.referee.id,
+            email: referral.referee.email,
+            name: `${referral.referee.firstName} ${referral.referee.lastName}`,
+            referralCode: referral.referee.referralCode,
+          });
+
+          await traverse(referral.referee.id, currentLevel + 1);
+        }
+      };
+
+      await traverse(user.id, 1);
+
+      return result;
+    } catch (error) {
+      handleErrorCatch(error);
+    }
   }
 }
