@@ -18,7 +18,7 @@ export class Commission {
   @JoinColumn({ name: 'user' })
   user: User;
 
-  @ManyToOne(() => User, (user) => user.commissionsGenerated, {
+  @ManyToOne(() => User, {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'sourceUser' })

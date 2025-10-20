@@ -5,10 +5,14 @@ import {
   Repository,
   FindOneOptions,
   SaveOptions,
+  FindOptionsOrder,
+  Between,
 } from 'typeorm';
 import { BaseEntity } from './BaseEntity';
 import { QueryDeepPartialEntity } from 'typeorm/query-builder/QueryPartialEntity';
 import { NotFoundException } from '@nestjs/common';
+import { PaginatedQuery } from './paginated-query';
+import { CREATED_AT_COLUMN } from 'src/libs/common/constants';
 
 export abstract class BaseRepository<T extends BaseEntity> {
   private entity: Repository<T>;
@@ -69,6 +73,59 @@ export abstract class BaseRepository<T extends BaseEntity> {
     partialEntity: QueryDeepPartialEntity<T>,
   ) {
     return await this.entity.update(where, partialEntity);
+  }
+
+  async findPaginated(
+    { page, size, filter, filterBy, order, orderBy, from, to }: PaginatedQuery,
+    options?: FindManyOptions<T>,
+  ) {
+    size = size ? size : 10;
+    page = page ? page : 1;
+    const offset = (page - 1) * size;
+
+    let where: FindOptionsWhere<T> | FindOptionsWhere<T>[] =
+      options?.where || {};
+
+    const orderRelation = {
+      [orderBy ? orderBy : CREATED_AT_COLUMN]: order ? order : 'DESC',
+    } as FindOptionsOrder<T>;
+
+    if (filter && filterBy) {
+      filter = filter === 'true' ? true : filter === 'false' ? false : filter;
+      where = {
+        ...where,
+        [filterBy]: filter,
+      };
+    }
+
+    if (from && to) {
+      const dateColumn = orderBy ?? CREATED_AT_COLUMN;
+      where = {
+        ...where,
+        [dateColumn]: Between(new Date(from), new Date(to)),
+      } as FindOptionsWhere<T>;
+    }
+
+    const res = await this.entity.findAndCount({
+      ...options,
+      take: size,
+      skip: offset,
+      where,
+      order: {
+        ...orderRelation,
+      },
+    });
+
+    const [data, total] = res;
+
+    return {
+      data,
+      pagination: {
+        total,
+        size: +size,
+        page: +page,
+      },
+    };
   }
 
   async delete(where: FindOptionsWhere<T>) {

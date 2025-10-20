@@ -49,6 +49,10 @@ export class PaginatedQuery {
   from?: string;
 
   @IsOptional()
+  @IsString()
+  dateField?: string;
+
+  @IsOptional()
   @IsDateString({}, { message: 'To must be a valid date string' })
   to?: string;
 

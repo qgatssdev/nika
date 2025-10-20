@@ -13,6 +13,8 @@ import { SignUpDto } from '../dto/signup.dto';
 import { User } from '../entity/user.entity';
 import { UserRepository } from '../repository/user.repository';
 import { ReferralService } from 'src/modules/referral/services/referral.service';
+import { UserWalletRepository } from '../repository/user-wallet-repository';
+import { TokenTypeEnum } from 'src/libs/common/constants/constants';
 @Injectable()
 export class AuthService {
   private logger: Logger;
@@ -25,6 +27,9 @@ export class AuthService {
 
   @Inject()
   private readonly referralService: ReferralService;
+
+  @Inject()
+  private readonly userWalletRepository: UserWalletRepository;
 
   public async signUp({
     email,
@@ -55,6 +60,20 @@ export class AuthService {
       });
 
       await this.userRepository.save(newUser);
+
+      const defaultWallets = [
+        TokenTypeEnum.USDT,
+        TokenTypeEnum.ETH,
+        TokenTypeEnum.SOL,
+        TokenTypeEnum.BTC,
+      ].map((tokenType) => ({
+        user: { id: newUser.id },
+        tokenType,
+        balance: 0,
+        claimedAmount: 0,
+      }));
+
+      await this.userWalletRepository.saveMany(defaultWallets);
 
       if (referralCode) {
         await this.referralService.registerReferral(referralCode, newUser.id);

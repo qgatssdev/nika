@@ -19,9 +19,9 @@ function onModuleDestroy<T extends object>(
 }
 
 const databaseProvider = {
-  provide: typeorm.Connection,
+  provide: typeorm.DataSource,
   useFactory: async () => {
-    const conn = await new typeorm.DataSource({
+    const dataSource = await new typeorm.DataSource({
       type: 'postgres',
       host: Config.DATABASE_HOST,
       port: Config.DATABASE_PORT,
@@ -37,23 +37,23 @@ const databaseProvider = {
         ca: Config.DATABASE_SSL_CA_CERT,
       },
     });
-    return onModuleDestroy(conn, (c) => c.destroy());
+    return onModuleDestroy(dataSource, (c) => c.destroy());
   },
 };
 
 const entityManagerProvider: FactoryProvider = {
   provide: typeorm.EntityManager,
-  useFactory: async (cxn: typeorm.Connection) => {
+  useFactory: async (dataSource: typeorm.DataSource) => {
     const logger = new Logger('DatabaseModule');
-    if (!cxn.isInitialized) {
+    if (!dataSource.isInitialized) {
       logger.log('Connecting to database...');
-      await cxn.initialize();
+      await dataSource.initialize();
       logger.log('Database connected successfully');
     }
-    const manager = cxn.createEntityManager();
+    const manager = dataSource.createEntityManager();
     return onModuleDestroy(manager, (m) => m.release());
   },
-  inject: [typeorm.Connection],
+  inject: [typeorm.DataSource],
 };
 
 @Global()

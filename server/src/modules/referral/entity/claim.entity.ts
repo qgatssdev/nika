@@ -8,9 +8,12 @@ export class Claim extends BaseEntity {
   @JoinColumn({ name: 'user' })
   user: User;
 
-  @Column({ type: 'decimal', precision: 18, scale: 8 })
-  totalAmount: number;
-
-  @Column({ type: 'varchar', length: 10 })
+  @Column({ type: 'varchar', length: 50 })
   tokenType: string;
+
+  @Column({ type: 'decimal', precision: 18, scale: 8 })
+  amount: string;
+
+  @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
+  claimedAt: Date;
 }

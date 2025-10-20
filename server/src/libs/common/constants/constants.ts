@@ -8,3 +8,12 @@ export interface FeeBreakdown {
     level3?: { userId: string; percent: number; amount: number };
   };
 }
+
+export const CREATED_AT_COLUMN = 'createdAt';
+
+export enum TokenTypeEnum {
+  USDT = 'USDT',
+  ETH = 'ETH',
+  SOL = 'SOL',
+  BTC = 'BTC',
+}

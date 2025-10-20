@@ -4,6 +4,7 @@ import { Commission } from 'src/modules/referral/entity/commission.entity';
 import { Referral } from 'src/modules/referral/entity/referral.entity';
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { Claim } from 'src/modules/referral/entity/claim.entity';
+import { UserWallet } from './user-wallet.entity';
 
 @Entity('user')
 export class User extends BaseEntity {
@@ -16,14 +17,8 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   lastName: string;
 
-  @Column({
-    type: 'decimal',
-    precision: 18,
-    scale: 2,
-    default: 0,
-    nullable: true,
-  })
-  walletBalance: string;
+  @OneToMany(() => UserWallet, (wallet) => wallet.user)
+  wallets: UserWallet[];
 
   @Column({ type: 'varchar', nullable: true, unique: true })
   referralCode: string;
@@ -44,9 +39,6 @@ export class User extends BaseEntity {
 
   @OneToMany(() => Commission, (commission) => commission.user)
   commissionsEarned: Commission[];
-
-  @OneToMany(() => Commission, (commission) => commission.sourceUser)
-  commissionsGenerated: Commission[];
 
   @OneToMany(() => Claim, (claim) => claim.user)
   claims: Claim[];

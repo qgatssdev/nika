@@ -1,4 +1,5 @@
-import { IsNumber, IsNotEmpty, IsUUID, IsOptional } from 'class-validator';
+import { IsNumber, IsNotEmpty, IsUUID, IsEnum } from 'class-validator';
+import { TokenTypeEnum } from 'src/libs/common/constants/constants';
 
 export class TradeWebhookDto {
   @IsUUID()
@@ -12,4 +13,8 @@ export class TradeWebhookDto {
   @IsNumber()
   @IsNotEmpty()
   fees: number;
+
+  @IsEnum(TokenTypeEnum)
+  @IsNotEmpty()
+  tokenType: TokenTypeEnum;
 }
