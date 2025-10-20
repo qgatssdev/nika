@@ -16,6 +16,15 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', nullable: true })
   lastName: string;
 
+  @Column({
+    type: 'decimal',
+    precision: 18,
+    scale: 2,
+    default: 0,
+    nullable: true,
+  })
+  walletBalance: string;
+
   @Column({ type: 'varchar', nullable: true, unique: true })
   referralCode: string;
 

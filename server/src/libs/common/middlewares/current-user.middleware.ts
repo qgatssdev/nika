@@ -4,7 +4,6 @@ import * as jwt from 'jsonwebtoken';
 import { Config } from 'src/config';
 import { UserRepository } from 'src/modules/auth/repository/user.repository';
 
-// Extend Request interface to include user property
 interface RequestWithUser extends Request {
   user?: any;
 }

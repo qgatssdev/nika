@@ -198,4 +198,20 @@ export abstract class BaseRepository<T extends BaseEntity> {
       throw error;
     }
   }
+
+  async increment(
+    where: FindOptionsWhere<T>,
+    propertyPath: keyof T,
+    value: number,
+  ): Promise<void> {
+    await this.entity.increment(where, propertyPath as string, value);
+  }
+
+  async decrement(
+    where: FindOptionsWhere<T>,
+    propertyPath: keyof T,
+    value: number,
+  ): Promise<void> {
+    await this.entity.decrement(where, propertyPath as string, value);
+  }
 }

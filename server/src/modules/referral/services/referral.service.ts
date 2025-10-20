@@ -9,6 +9,7 @@ import { UserRepository } from 'src/modules/auth/repository/user.repository';
 import { handleErrorCatch } from 'src/libs/common/helpers/utils';
 import { createReferralCode } from 'src/libs/common/helpers/utils';
 import { ReferralRepository } from '../repository/referral.repository';
+import { FeeBreakdown } from 'src/libs/common/constants/constants';
 
 type LevelKey = 'level1' | 'level2' | 'level3';
 type ReferralNode = {
@@ -16,6 +17,7 @@ type ReferralNode = {
   email: string;
   name: string;
   referralCode: string;
+  walletBalance: string;
 };
 
 @Injectable()
@@ -155,6 +157,7 @@ export class ReferralService {
             email: referral.referee.email,
             name: `${referral.referee.firstName} ${referral.referee.lastName}`,
             referralCode: referral.referee.referralCode,
+            walletBalance: referral.referee.walletBalance,
           });
 
           await traverse(referral.referee.id, currentLevel + 1);
@@ -167,5 +170,60 @@ export class ReferralService {
     } catch (error) {
       handleErrorCatch(error);
     }
+  }
+
+  public async calculateFeeBreakdown(
+    userId: string,
+    feeAmount: number,
+    cashbackPercent: number = 0.1,
+  ): Promise<FeeBreakdown> {
+    const COMMISSIONS = { level1: 0.3, level2: 0.03, level3: 0.02 }; // default
+
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      relations: ['referrer'],
+    });
+
+    if (!user) throw new NotFoundException('User not found');
+
+    const cashback = feeAmount * cashbackPercent;
+
+    const commissions: FeeBreakdown['commissions'] = {};
+    let currentReferrer = user.referrer;
+    let level = 1;
+
+    while (currentReferrer && level <= 3) {
+      const percent = COMMISSIONS[`level${level}` as keyof typeof COMMISSIONS];
+      const amount = feeAmount * percent;
+
+      commissions[`level${level}` as keyof typeof COMMISSIONS] = {
+        userId: currentReferrer.id,
+        percent,
+        amount,
+      };
+
+      const refLink = await this.referralRepository.findOne({
+        where: { referee: { id: currentReferrer.id } },
+        relations: ['referrer'],
+      });
+
+      currentReferrer = refLink?.referrer ?? null;
+      level++;
+    }
+
+    const treasury =
+      feeAmount -
+      (cashback +
+        Object.values(commissions).reduce(
+          (sum, c) => sum + (c?.amount ?? 0),
+          0,
+        ));
+
+    return {
+      totalFee: feeAmount,
+      cashback,
+      treasury,
+      commissions,
+    };
   }
 }
