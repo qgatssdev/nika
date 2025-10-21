@@ -35,20 +35,20 @@ const DashboardView = () => {
 
   return (
     <div className='p-4'>
-      <div className='flex items-center justify-between mb-4'>
-        <div className='text-xl font-semibold'>Dashboard</div>
-        <div className='flex items-center gap-3'>
-          <div className='text-sm text-white/80'>
+      <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4'>
+        <div className='text-lg sm:text-xl font-semibold'>Dashboard</div>
+        <div className='flex items-center gap-2 sm:gap-3 w-full sm:w-auto flex-wrap'>
+          <div className='text-sm text-white/80 order-1 sm:order-0'>
             {isLoading
               ? 'Loading…'
               : `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() ||
                 user?.email}
           </div>
-          <div className='flex items-center gap-2'>
+          <div className='grid grid-cols-2 gap-2 w-full sm:w-auto order-2 sm:order-0 sm:flex sm:items-center sm:gap-2'>
             <ClientOnly
               fallback={
                 <button
-                  className='px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-sm cursor-default'
+                  className='w-full sm:w-auto col-span-2 px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-sm cursor-default'
                   disabled
                 >
                   {selectedToken || 'Select Wallet'}
@@ -57,7 +57,7 @@ const DashboardView = () => {
             >
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className='px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-sm cursor-pointer'>
+                  <button className='w-full sm:w-auto col-span-2 px-3 py-1.5 rounded-md bg-white/5 border border-white/10 text-sm cursor-pointer'>
                     {selectedToken || 'Select Wallet'}
                   </button>
                 </DropdownMenuTrigger>
@@ -81,7 +81,7 @@ const DashboardView = () => {
                 </DropdownMenuContent>
               </DropdownMenu>
             </ClientOnly>
-            <div className='text-sm text-white/80'>
+            <div className='hidden sm:block text-sm text-white/80'>
               {user?.wallets?.find((w) => w.tokenType === selectedToken)
                 ? `${
                     user.wallets.find((w) => w.tokenType === selectedToken)!
@@ -91,7 +91,7 @@ const DashboardView = () => {
             </div>
             <button
               onClick={() => setIsClaimOpen(true)}
-              className='ml-5 px-3 py-1.5 rounded-md bg-white text-black border border-white/10 text-sm cursor-pointer'
+              className='w-full sm:w-auto sm:ml-5 px-3 py-2 min-h-[40px] rounded-md bg-white text-black border border-white/10 text-sm cursor-pointer mt-2 sm:mt-0'
             >
               Claim Commissions
             </button>
@@ -101,7 +101,7 @@ const DashboardView = () => {
                 refresh();
               }}
               type='button'
-              className='cursor-pointer ml-10 px-3 py-1.5 rounded-md bg-[#B3261E] border border-white/10 text-sm'
+              className='w-full sm:w-auto cursor-pointer sm:ml-10 px-3 py-2 min-h-[40px] rounded-md bg-[#B3261E] border border-white/10 text-sm mt-2 sm:mt-0'
             >
               Logout
             </button>

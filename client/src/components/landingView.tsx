@@ -74,7 +74,7 @@ const LandingView = () => {
   return (
     <div
       ref={containerRef}
-      className='relative min-h-screen overflow-hidden bg-[#05070E] text-white px-[50px]'
+      className='relative min-h-screen overflow-hidden bg-[#05070E] text-white px-[50px] max-sm:px-[15px]'
     >
       <div className='mx-auto max-w-[1160px] px-4 pt-6'>
         <div
