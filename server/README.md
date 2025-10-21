@@ -1,3 +1,147 @@
+## Nika Server
+
+NestJS · TypeScript · REST API
+
+---
+
+### 1 · Quick start
+
+```bash
+yarn install
+yarn start:dev          # dev server → http://localhost:3000
+
+# quality gates
+yarn lint
+yarn test
+```
+
+Swagger docs are available at `/docs`.
+
+Global API prefix is `/api` and URI versioning is enabled. Example: `/api/v1/...`.
+
+---
+
+### 2 · Project layout
+
+```
+src/
+ ├─ main.ts                 # app bootstrap (global prefix, versioning, pipes, CORS, swagger)
+ ├─ app.module.ts           # root module wiring
+ │
+ ├─ modules/                # business domains
+ │   ├─ auth/               # authentication, users, repositories
+ │   ├─ referral/           # referral network, earnings & claims
+ │   └─ trade/              # trade webhook processing
+ │      ├─ controllers/     # Nest controllers (HTTP layer)
+ │      ├─ services/        # domain services (business logic)
+ │      └─ dto/             # request/response DTOs (class-validator)
+ │
+ ├─ libs/                   # cross‑cutting concerns (guards, constants, base classes)
+ └─ infra/                  # infrastructure helpers
+```
+
+Guidelines
+
+1. Controllers stay thin. They validate input and delegate to services.
+2. Business logic lives in services; persist via repositories.
+3. DTOs use `class-validator` for input validation.
+4. Cross‑cutting concerns (guards, interceptors, constants) go under `src/libs`.
+
+---
+
+### 3 · API versioning & prefix
+
+- Global prefix: `/api`
+- Versioning: URI-based, e.g. `/api/v1/*` (see `main.ts`).
+
+---
+
+### 4 · Key endpoints (excerpt)
+
+Trade
+
+```
+POST /api/v1/trade/webhook
+Body: {
+  userId: string (uuid),
+  volume: number,         // trade notional (USD)
+  fees: number,           // total fees collected
+  tokenType: TokenTypeEnum
+}
+```
+
+Referral (protected by `AuthGuard` where noted)
+
+```
+POST /api/v1/referral/generate      (Auth)
+POST /api/v1/referral/register
+GET  /api/v1/referral/network       (Auth)
+GET  /api/v1/referral/earnings      (Auth)
+POST /api/v1/referral/claim         (Auth)
+```
+
+Swagger docs show the full contract and examples.
+
+---
+
+### 5 · Example: Trade webhook flow
+
+1. Controller (`trade.controller.ts`) receives POST `/api/v1/trade/webhook` with `TradeWebhookDto`.
+2. Service (`trade.service.ts`) validates user, computes fee rate, and delegates referral fee breakdown to `ReferralService`.
+3. Commission records and wallet updates are performed transactionally.
+
+Minimal cURL
+
+```bash
+curl -X POST http://localhost:3000/api/v1/trade/webhook \
+  -H 'Content-Type: application/json' \
+  -d '{
+        "userId": "00000000-0000-0000-0000-000000000000",
+        "volume": 100000,
+        "fees": 1000,
+        "tokenType": "USDT"
+      }'
+```
+
+---
+
+### 6 · Env variables (excerpt)
+
+| key            | purpose                  |
+| -------------- | ------------------------ |
+| `PORT`         | HTTP port (default 3000) |
+| `DATABASE_URL` | Database connection URL  |
+| `JWT_SECRET`   | JWT signing secret       |
+
+Create an `.env` (or `.env.local`) and ensure the process manager loads it.
+
+---
+
+### 7 · Scripts
+
+| script      | purpose               |
+| ----------- | --------------------- |
+| `start`     | start in production   |
+| `start:dev` | start with watch mode |
+| `build`     | compile TypeScript    |
+| `lint`      | run eslint            |
+| `test`      | unit tests            |
+| `test:e2e`  | e2e tests             |
+| `test:cov`  | coverage              |
+
+---
+
+### 8 · Conventions
+
+- Use DTOs with validation for every incoming payload.
+- Throw Nest `HttpException` subclasses for error cases.
+- Keep modules independent; share only via `libs/` or explicit exports.
+- Prefer transactional writes for multi-entity updates (TypeORM `EntityManager`).
+
+---
+
+Happy building 🚀
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
