@@ -33,3 +33,13 @@ body {
     ),
     radial-gradient(900px 500px at 0% 100%, #0b122d 0%, transparent 60%);
 }
+
+/* Hide number input spinners */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield; /* Firefox */
+}
