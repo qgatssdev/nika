@@ -17,6 +17,7 @@ import Input from '@/components/ui/input';
 import toast from 'react-hot-toast';
 import { routes } from '@/routes';
 import { TbCopy } from 'react-icons/tb';
+import Skeleton from '@/components/ui/skeleton';
 
 const DashboardView = () => {
   const { data: user, isLoading } = useUser();
@@ -39,10 +40,14 @@ const DashboardView = () => {
         <div className='text-lg sm:text-xl font-semibold'>Dashboard</div>
         <div className='flex items-center gap-2 sm:gap-3 w-full sm:w-auto flex-wrap'>
           <div className='text-sm text-white/80 order-1 sm:order-0'>
-            {isLoading
-              ? 'Loading…'
-              : `${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() ||
-                user?.email}
+            {isLoading ? (
+              <Skeleton className='h-4 w-28 rounded-sm' />
+            ) : (
+              <>
+                {`${user?.firstName ?? ''} ${user?.lastName ?? ''}`.trim() ||
+                  user?.email}
+              </>
+            )}
           </div>
           <div className='grid grid-cols-2 gap-2 w-full sm:w-auto order-2 sm:order-0 sm:flex sm:items-center sm:gap-2'>
             <ClientOnly
@@ -82,12 +87,16 @@ const DashboardView = () => {
               </DropdownMenu>
             </ClientOnly>
             <div className='hidden sm:block text-sm text-white/80'>
-              {user?.wallets?.find((w) => w.tokenType === selectedToken)
-                ? `${
-                    user.wallets.find((w) => w.tokenType === selectedToken)!
-                      .balance
-                  } ${selectedToken}`
-                : ''}
+              {isLoading ? (
+                <Skeleton className='h-4 w-24 rounded-sm' />
+              ) : user?.wallets?.find((w) => w.tokenType === selectedToken) ? (
+                `${
+                  user.wallets.find((w) => w.tokenType === selectedToken)!
+                    .balance
+                } ${selectedToken}`
+              ) : (
+                ''
+              )}
             </div>
             <button
               onClick={() => setIsClaimOpen(true)}
@@ -123,22 +132,26 @@ const DashboardView = () => {
         >
           <div className='w-full max-w-md mx-auto mb-4'>
             <div className='text-sm text-white/70 mb-1'>Invite link</div>
-            <div className='flex items-center gap-2'>
-              <div className='flex-1 relative'>
-                <Input readOnly value={referralUrl} className='w-full' />
-                <button
-                  className='absolute right-2 top-1/2 -translate-y-1/2 flex gap-2 bg-white text-black items-center px-2 py-1 rounded-md text-sm'
-                  onClick={() => {
-                    const url = referralUrl;
-                    navigator.clipboard.writeText(url);
-                    toast.success('Copied');
-                  }}
-                >
-                  <TbCopy className='w-4 h-4' />
-                  Copy
-                </button>
+            {isLoading ? (
+              <Skeleton className='h-10 w-full rounded-md' />
+            ) : (
+              <div className='flex items-center gap-2'>
+                <div className='flex-1 relative'>
+                  <Input readOnly value={referralUrl} className='w-full' />
+                  <button
+                    className='absolute right-2 top-1/2 -translate-y-1/2 flex gap-2 bg-white text-black items-center px-2 py-1 rounded-md text-sm'
+                    onClick={() => {
+                      const url = referralUrl;
+                      navigator.clipboard.writeText(url);
+                      toast.success('Copied');
+                    }}
+                  >
+                    <TbCopy className='w-4 h-4' />
+                    Copy
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </ClientOnly>
       </div>
