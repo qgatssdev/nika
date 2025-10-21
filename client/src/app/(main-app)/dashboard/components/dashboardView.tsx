@@ -112,34 +112,36 @@ const DashboardView = () => {
         <ClaimModal onClose={() => setIsClaimOpen(false)} />
       ) : null}
 
-      <ClientOnly
-        fallback={
+      <div className='mt-[100px]'>
+        <ClientOnly
+          fallback={
+            <div className='w-full max-w-md mx-auto mb-4'>
+              <div className='text-sm text-white/70 mb-1'>Invite link</div>
+              <div className='rounded-md bg-white/5 border border-white/10 h-10' />
+            </div>
+          }
+        >
           <div className='w-full max-w-md mx-auto mb-4'>
             <div className='text-sm text-white/70 mb-1'>Invite link</div>
-            <div className='rounded-md bg-white/5 border border-white/10 h-10' />
-          </div>
-        }
-      >
-        <div className='w-full max-w-md mx-auto mb-4 mt-[100px]'>
-          <div className='text-sm text-white/70 mb-1'>Invite link</div>
-          <div className='flex items-center gap-2'>
-            <div className='flex-1 relative'>
-              <Input readOnly value={referralUrl} className='w-full' />
-              <button
-                className='absolute right-2 top-1/2 -translate-y-1/2 flex gap-2 bg-white text-black items-center px-2 py-1 rounded-md text-sm'
-                onClick={() => {
-                  const url = referralUrl;
-                  navigator.clipboard.writeText(url);
-                  toast.success('Copied');
-                }}
-              >
-                <TbCopy className='w-4 h-4' />
-                Copy
-              </button>
+            <div className='flex items-center gap-2'>
+              <div className='flex-1 relative'>
+                <Input readOnly value={referralUrl} className='w-full' />
+                <button
+                  className='absolute right-2 top-1/2 -translate-y-1/2 flex gap-2 bg-white text-black items-center px-2 py-1 rounded-md text-sm'
+                  onClick={() => {
+                    const url = referralUrl;
+                    navigator.clipboard.writeText(url);
+                    toast.success('Copied');
+                  }}
+                >
+                  <TbCopy className='w-4 h-4' />
+                  Copy
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      </ClientOnly>
+        </ClientOnly>
+      </div>
 
       <div className='mt-[10px]'>
         <TradeWidget />

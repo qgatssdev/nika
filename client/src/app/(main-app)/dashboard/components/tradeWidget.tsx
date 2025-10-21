@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import Input from '@/components/ui/input';
 import Button from '@/components/ui/button';
 import { useUser } from '@/services/user/queries';
 import { TbArrowsUpDown } from 'react-icons/tb';
-import type { TokenSymbol } from '@/utils/tokenPrices';
-import { TOKEN_USD_PRICE, getConversionRate } from '@/utils/tokenPrices';
+import {
+  TOKEN_USD_PRICE,
+  TokenTypeEnum,
+  getConversionRate,
+} from '@/utils/tokenPrices';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,16 +21,21 @@ import toast from 'react-hot-toast';
 import { useSelectedWallet } from '@/hooks/useSelectedWallet';
 import ClientOnly from '@/components/clientOnly';
 import Storage from '@/utils/storage';
+import Skeleton from '@/components/ui/skeleton';
 
 const TradeWidget: React.FC = () => {
   const [payAmount, setPayAmount] = useState('0');
   const [getAmount, setGetAmount] = useState('0');
 
-  const [payToken, setPayToken] = useState<TokenSymbol>('ETH');
-  const [getToken, setGetToken] = useState<TokenSymbol>('USDC');
+  const [payToken, setPayToken] = useState<TokenTypeEnum>(TokenTypeEnum.ETH);
+  const [getToken, setGetToken] = useState<TokenTypeEnum>(TokenTypeEnum.SOL);
 
   const [isLoading, setIsLoading] = useState(false);
-  const { data: user } = useUser();
+  const {
+    data: user,
+    isLoading: isUserLoading,
+    isFetching: isUserFetching,
+  } = useUser();
   const { selectedToken: selectedWalletToken } = useSelectedWallet(
     user?.id,
     user?.wallets
@@ -41,7 +49,7 @@ const TradeWidget: React.FC = () => {
       selectedWalletToken &&
       payToken !== selectedWalletToken
     ) {
-      setPayToken(selectedWalletToken as TokenSymbol);
+      setPayToken(selectedWalletToken as TokenTypeEnum);
       hasInitializedPayTokenRef.current = true;
     }
   }, [selectedWalletToken, payToken]);
@@ -56,15 +64,26 @@ const TradeWidget: React.FC = () => {
   const grossGetAmount = volume * conversionRate;
   const isInsufficient = volume > numericPayBalance;
 
-  const availableTokens = React.useMemo(() => {
+  const availableTokens = useMemo(() => {
     const fromUser = (user?.wallets ?? []).map(
-      (w) => w.tokenType as TokenSymbol
+      (w) => w.tokenType as TokenTypeEnum
     );
 
-    const fallback = Object.keys(TOKEN_USD_PRICE) as TokenSymbol[];
+    const fallback = Object.keys(TOKEN_USD_PRICE) as TokenTypeEnum[];
     const list = fromUser.length ? fromUser : fallback;
     return Array.from(new Set(list));
   }, [user]);
+
+  const getWalletBalance = useCallback(
+    (symbol: TokenTypeEnum) => {
+      const balanceStr = user?.wallets?.find(
+        (w) => w.tokenType === symbol
+      )?.balance;
+      const balanceNum = Number(balanceStr ?? 0);
+      return balanceNum;
+    },
+    [user]
+  );
 
   const { mutate: performTrade, isPending: isPerformingTradeMutation } =
     usePerformTrade(
@@ -133,12 +152,19 @@ const TradeWidget: React.FC = () => {
                   type='number'
                 />
               </div>
-              <div className='text-xs text-white/50 mt-1 absolute -bottom-5'>
-                $
-                {(
-                  Number(payAmount) * getConversionRate(payToken, 'USDC')
-                ).toFixed(2)}
-              </div>
+              {isUserLoading || isUserFetching ? (
+                <div className='absolute -bottom-5 w-24'>
+                  <Skeleton className='h-3 w-full rounded-sm' />
+                </div>
+              ) : (
+                <div className='text-xs text-white/50 mt-1 absolute -bottom-5'>
+                  $
+                  {(
+                    Number(payAmount) *
+                    getConversionRate(payToken, TokenTypeEnum.USDC)
+                  ).toFixed(2)}
+                </div>
+              )}
             </div>
             <div className='relative'>
               <ClientOnly
@@ -160,15 +186,26 @@ const TradeWidget: React.FC = () => {
                   <DropdownMenuContent align='end'>
                     {availableTokens.map((t) => (
                       <DropdownMenuItem key={t} onClick={() => setPayToken(t)}>
-                        {t}
+                        <div className='flex items-center gap-2 justify-between w-full'>
+                          <span>{t}</span>
+                          <span className='text-xs text-white/70'>
+                            {getWalletBalance(t).toFixed(8)}
+                          </span>
+                        </div>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </ClientOnly>
-              <div className='text-xs text-white/60 mt-1 text-right absolute -bottom-6 whitespace-nowrap -left-25'>
-                Balance: {Number(payBalance).toFixed(8)} {payToken}
-              </div>
+              {isUserLoading || isUserFetching ? (
+                <div className='absolute -bottom-6 right-0 w-36'>
+                  <Skeleton className='h-3 w-full rounded-sm' />
+                </div>
+              ) : (
+                <div className='text-xs text-white/60 mt-1 text-right absolute -bottom-6 whitespace-nowrap -left-25'>
+                  Balance: {Number(payBalance).toFixed(8)} {payToken}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -189,9 +226,13 @@ const TradeWidget: React.FC = () => {
           </div>
           <div className='flex items-center gap-2'>
             <div className='flex-1'>
-              <div className='text-2xl font-semibold'>
-                ${grossGetAmount.toFixed(8)}
-              </div>
+              {isUserLoading || isUserFetching ? (
+                <Skeleton className='h-7 w-40 rounded-md' />
+              ) : (
+                <div className='text-2xl font-semibold'>
+                  ${grossGetAmount.toFixed(8)}
+                </div>
+              )}
             </div>
             <div>
               <ClientOnly
@@ -213,7 +254,12 @@ const TradeWidget: React.FC = () => {
                   <DropdownMenuContent align='end'>
                     {availableTokens.map((t) => (
                       <DropdownMenuItem key={t} onClick={() => setGetToken(t)}>
-                        {t}
+                        <div className='flex items-center gap-2 justify-between w-full'>
+                          <span>{t}</span>
+                          <span className='text-xs text-white/70'>
+                            {getWalletBalance(t).toFixed(8)}
+                          </span>
+                        </div>
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
@@ -226,9 +272,13 @@ const TradeWidget: React.FC = () => {
         <div className='grid grid-cols-2 gap-2 text-xs text-white/70'>
           <div className='rounded-lg bg-white/5 border border-white/10 p-2'>
             <div>Fees</div>
-            <div className='text-white mt-1'>
-              ${user?.feeTier ? user.feeTier * Number(payAmount) : 0}
-            </div>
+            {isUserLoading || isUserFetching ? (
+              <Skeleton className='h-4 w-16 mt-1 rounded-sm' />
+            ) : (
+              <div className='text-white mt-1'>
+                ${user?.feeTier ? user.feeTier * Number(payAmount) : 0}
+              </div>
+            )}
           </div>
           <div className='rounded-lg bg-white/5 border border-white/10 p-2'>
             <div>Slippage</div>
@@ -240,6 +290,12 @@ const TradeWidget: React.FC = () => {
           <div className='text-red-400 text-sm mb-2'>Insufficient balance</div>
         ) : null}
 
+        {payToken === getToken && !isInsufficient ? (
+          <div className='text-red-400 text-sm mb-2'>
+            You cannot trade the same token
+          </div>
+        ) : null}
+
         <Button
           onClick={handleMockTrade}
           loading={isLoading || isPerformingTradeMutation}
@@ -247,7 +303,6 @@ const TradeWidget: React.FC = () => {
             payToken === getToken ||
             isInsufficient ||
             Number(payAmount) <= 0 ||
-            Number(getAmount) <= 0 ||
             isNaN(Number(payAmount)) ||
             isNaN(Number(getAmount))
           }

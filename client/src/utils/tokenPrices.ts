@@ -1,6 +1,11 @@
-export type TokenSymbol = 'USDC' | 'ETH' | 'SOL' | 'BTC';
+export enum TokenTypeEnum {
+  USDC = 'USDC',
+  ETH = 'ETH',
+  SOL = 'SOL',
+  BTC = 'BTC',
+}
 
-export const TOKEN_USD_PRICE: Record<TokenSymbol, number> = {
+export const TOKEN_USD_PRICE: Record<TokenTypeEnum, number> = {
   USDC: 1,
   ETH: 2700,
   SOL: 150,
@@ -8,8 +13,8 @@ export const TOKEN_USD_PRICE: Record<TokenSymbol, number> = {
 };
 
 export function getConversionRate(
-  payToken: TokenSymbol,
-  getToken: TokenSymbol
+  payToken: TokenTypeEnum,
+  getToken: TokenTypeEnum
 ): number {
   const payUsd = TOKEN_USD_PRICE[payToken] ?? 1;
   const getUsd = TOKEN_USD_PRICE[getToken] ?? 1;

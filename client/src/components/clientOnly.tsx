@@ -5,11 +5,13 @@ import React, { useEffect, useState } from 'react';
 type ClientOnlyProps = {
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  className?: string;
 };
 
 const ClientOnly: React.FC<ClientOnlyProps> = ({
   children,
   fallback = null,
+  className = '',
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -18,7 +20,7 @@ const ClientOnly: React.FC<ClientOnlyProps> = ({
   }, []);
 
   if (!mounted) return <>{fallback}</>;
-  return <>{children}</>;
+  return <div className={className}>{children}</div>;
 };
 
 export default ClientOnly;
