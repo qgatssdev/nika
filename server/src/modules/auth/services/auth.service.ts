@@ -62,14 +62,14 @@ export class AuthService {
       await this.userRepository.save(newUser);
 
       const defaultWallets = [
-        TokenTypeEnum.USDT,
+        TokenTypeEnum.USDC,
         TokenTypeEnum.ETH,
         TokenTypeEnum.SOL,
         TokenTypeEnum.BTC,
       ].map((tokenType) => ({
         user: { id: newUser.id },
         tokenType,
-        balance: 0,
+        balance: tokenType === TokenTypeEnum.USDC ? 10000 : 0, // 10000 USDC for testing purposes 😁
         claimedAmount: 0,
       }));
 

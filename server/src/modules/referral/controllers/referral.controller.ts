@@ -41,6 +41,12 @@ export class ReferralController {
   }
 
   @UseGuards(AuthGuard)
+  @Get('claimable')
+  async getClaimable(@CurrentUser() user: User) {
+    return this.referralService.getClaimableByToken(user.id);
+  }
+
+  @UseGuards(AuthGuard)
   @Post('claim')
   async claimReferral(@CurrentUser() user: User, @Body() body: ClaimDto) {
     return await this.referralService.claimCommission(user.id, body.tokenType);

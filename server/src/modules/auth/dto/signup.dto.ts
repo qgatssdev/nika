@@ -31,5 +31,5 @@ export class SignUpDto {
   @ApiPropertyOptional({ example: 'ABC-123456' })
   @IsString()
   @IsOptional()
-  referralCode: string;
+  referralCode?: string;
 }

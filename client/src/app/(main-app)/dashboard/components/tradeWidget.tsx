@@ -1,38 +1,111 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Input from '@/components/ui/input';
 import Button from '@/components/ui/button';
-import { postTradeWebhook, TradeWebhookPayload } from '@/services/trade';
+import { useUser } from '@/services/user/queries';
 import { TbArrowsUpDown } from 'react-icons/tb';
+import type { TokenSymbol } from '@/utils/tokenPrices';
+import { TOKEN_USD_PRICE, getConversionRate } from '@/utils/tokenPrices';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { usePerformTrade } from '../mutations';
+import toast from 'react-hot-toast';
+import { useSelectedWallet } from '@/hooks/useSelectedWallet';
+import ClientOnly from '@/components/clientOnly';
+import Storage from '@/utils/storage';
 
 const TradeWidget: React.FC = () => {
-  const [payAmount, setPayAmount] = useState('2.53');
-  const [getAmount, setGetAmount] = useState('6845.55');
-  const [payToken, setPayToken] = useState<'ETH' | 'USDT' | 'USDC'>('ETH');
-  const [getToken, setGetToken] = useState<'USDC' | 'ETH'>('USDC');
+  const [payAmount, setPayAmount] = useState('0');
+  const [getAmount, setGetAmount] = useState('0');
+
+  const [payToken, setPayToken] = useState<TokenSymbol>('ETH');
+  const [getToken, setGetToken] = useState<TokenSymbol>('USDC');
+
   const [isLoading, setIsLoading] = useState(false);
+  const { data: user } = useUser();
+  const { selectedToken: selectedWalletToken } = useSelectedWallet(
+    user?.id,
+    user?.wallets
+  );
+
+  const hasInitializedPayTokenRef = React.useRef(false);
+
+  useEffect(() => {
+    if (
+      !hasInitializedPayTokenRef.current &&
+      selectedWalletToken &&
+      payToken !== selectedWalletToken
+    ) {
+      setPayToken(selectedWalletToken as TokenSymbol);
+      hasInitializedPayTokenRef.current = true;
+    }
+  }, [selectedWalletToken, payToken]);
+
+  const payBalance =
+    user?.wallets?.find((w) => w.tokenType === payToken)?.balance ?? '0';
+  const numericPayBalance = Number(payBalance);
+
+  const volume = Number(payAmount) || 0;
+
+  const conversionRate = getConversionRate(payToken, getToken);
+  const grossGetAmount = volume * conversionRate;
+  const isInsufficient = volume > numericPayBalance;
+
+  const availableTokens = React.useMemo(() => {
+    const fromUser = (user?.wallets ?? []).map(
+      (w) => w.tokenType as TokenSymbol
+    );
+
+    const fallback = Object.keys(TOKEN_USD_PRICE) as TokenSymbol[];
+    const list = fromUser.length ? fromUser : fallback;
+    return Array.from(new Set(list));
+  }, [user]);
+
+  const { mutate: performTrade, isPending: isPerformingTradeMutation } =
+    usePerformTrade(
+      () => {
+        toast.success('Trade performed successfully');
+        setIsLoading(false);
+        setPayAmount('0');
+        setGetAmount('0');
+
+        if (user?.id) {
+          Storage.setCookie(`selectedWallet_${user.id}`, getToken);
+        }
+
+        setPayToken(getToken);
+      },
+      (error) => {
+        setIsLoading(false);
+        toast.error(error.response?.data.message || 'An error occurred');
+      }
+    );
 
   const handleSwap = () => {
-    setPayToken((prev) => (prev === 'ETH' ? 'USDC' : 'ETH'));
-    setGetToken((prev) => (prev === 'USDC' ? 'ETH' : 'USDC'));
+    const prevPay = payToken;
+    setPayToken(getToken);
+    setGetToken(prevPay);
     setPayAmount(getAmount);
     setGetAmount(payAmount);
   };
 
   const handleMockTrade = async () => {
     setIsLoading(true);
-    try {
-      const payload: TradeWebhookPayload = {
-        userId: '00000000-0000-0000-0000-000000000000',
-        volume: Number(payAmount) * 2700,
-        fees: 3.2,
-        tokenType: getToken,
-      };
-      await postTradeWebhook(payload);
-    } finally {
-      setIsLoading(false);
-    }
+    if (volume <= 0) return;
+    if (numericPayBalance < volume) return;
+
+    performTrade({
+      userId: user?.id ?? '',
+      volume,
+      fees: user?.feeTier ? user.feeTier * volume : 0,
+      payTokenType: payToken,
+      getTokenType: getToken,
+    });
   };
 
   return (
@@ -57,16 +130,45 @@ const TradeWidget: React.FC = () => {
                   value={payAmount}
                   onChange={(e) => setPayAmount(e.target.value)}
                   placeholder='0.0'
+                  type='number'
                 />
               </div>
               <div className='text-xs text-white/50 mt-1 absolute -bottom-5'>
-                $6865.88
+                $
+                {(
+                  Number(payAmount) * getConversionRate(payToken, 'USDC')
+                ).toFixed(2)}
               </div>
             </div>
-            <div>
-              <button className='px-3 py-2.5 rounded-lg bg-white/10 border border-white/10 text-sm'>
-                {payToken}
-              </button>
+            <div className='relative'>
+              <ClientOnly
+                fallback={
+                  <button
+                    className='px-3 py-2.5 rounded-lg bg-white/10 border border-white/10 text-sm'
+                    disabled
+                  >
+                    {payToken}
+                  </button>
+                }
+              >
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className='px-3 py-2.5 rounded-lg bg-white/10 border border-white/10 text-sm'>
+                      {payToken}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end'>
+                    {availableTokens.map((t) => (
+                      <DropdownMenuItem key={t} onClick={() => setPayToken(t)}>
+                        {t}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ClientOnly>
+              <div className='text-xs text-white/60 mt-1 text-right absolute -bottom-6 whitespace-nowrap -left-25'>
+                Balance: {Number(payBalance).toFixed(8)} {payToken}
+              </div>
             </div>
           </div>
         </div>
@@ -87,24 +189,46 @@ const TradeWidget: React.FC = () => {
           </div>
           <div className='flex items-center gap-2'>
             <div className='flex-1'>
-              <div className='text-2xl font-semibold'>${getAmount}</div>
+              <div className='text-2xl font-semibold'>
+                ${grossGetAmount.toFixed(8)}
+              </div>
             </div>
             <div>
-              <button className='px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm'>
-                {getToken}
-              </button>
+              <ClientOnly
+                fallback={
+                  <button
+                    className='px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm'
+                    disabled
+                  >
+                    {getToken}
+                  </button>
+                }
+              >
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className='px-3 py-2 rounded-lg bg-white/10 border border-white/10 text-sm'>
+                      {getToken}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end'>
+                    {availableTokens.map((t) => (
+                      <DropdownMenuItem key={t} onClick={() => setGetToken(t)}>
+                        {t}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ClientOnly>
             </div>
           </div>
         </div>
 
-        <div className='grid grid-cols-3 gap-2 text-xs text-white/70'>
-          <div className='rounded-lg bg-white/5 border border-white/10 p-2'>
-            <div>Min. Received</div>
-            <div className='text-white mt-1'>${getAmount}</div>
-          </div>
+        <div className='grid grid-cols-2 gap-2 text-xs text-white/70'>
           <div className='rounded-lg bg-white/5 border border-white/10 p-2'>
             <div>Fees</div>
-            <div className='text-white mt-1'>$3.2</div>
+            <div className='text-white mt-1'>
+              ${user?.feeTier ? user.feeTier * Number(payAmount) : 0}
+            </div>
           </div>
           <div className='rounded-lg bg-white/5 border border-white/10 p-2'>
             <div>Slippage</div>
@@ -112,7 +236,22 @@ const TradeWidget: React.FC = () => {
           </div>
         </div>
 
-        <Button onClick={handleMockTrade} loading={isLoading}>
+        {isInsufficient ? (
+          <div className='text-red-400 text-sm mb-2'>Insufficient balance</div>
+        ) : null}
+
+        <Button
+          onClick={handleMockTrade}
+          loading={isLoading || isPerformingTradeMutation}
+          disabled={
+            payToken === getToken ||
+            isInsufficient ||
+            Number(payAmount) <= 0 ||
+            Number(getAmount) <= 0 ||
+            isNaN(Number(payAmount)) ||
+            isNaN(Number(getAmount))
+          }
+        >
           Trade
         </Button>
       </div>

@@ -3,7 +3,7 @@ import { ApiProperty } from '@nestjs/swagger';
 import { TokenTypeEnum } from 'src/libs/common/constants/constants';
 
 export class ClaimDto {
-  @ApiProperty({ example: TokenTypeEnum.USDT, enum: TokenTypeEnum })
+  @ApiProperty({ example: TokenTypeEnum.USDC, enum: TokenTypeEnum })
   @IsEnum(TokenTypeEnum)
   @IsNotEmpty()
   tokenType: TokenTypeEnum;

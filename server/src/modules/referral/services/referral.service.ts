@@ -364,6 +364,32 @@ export class ReferralService {
     };
   }
 
+  async getClaimableByToken(userId: string) {
+    try {
+      const user = await this.userRepository.findOne({ where: { id: userId } });
+      if (!user) throw new NotFoundException('User not found');
+
+      const commissionRepo = this.dataSource.getRepository(Commission);
+      const rows = await commissionRepo
+        .createQueryBuilder('c')
+        .select('"c"."tokenType"', 'tokenType')
+        .addSelect('SUM(CAST("c"."amount" as decimal))', 'amount')
+        .where('"c"."user" = :userId AND "c"."isClaimed" = false', {
+          userId,
+        })
+        .groupBy('"c"."tokenType"')
+        .getRawMany();
+
+      return rows.map((r) => ({
+        tokenType: r.tokenType as string,
+        amount: Number(r.amount),
+      }));
+    } catch (error) {
+      handleErrorCatch(error);
+      throw error;
+    }
+  }
+
   async claimCommission(userId: string, tokenType: string) {
     return await this.dataSource.transaction(async (manager) => {
       // Rebind repositories to the transaction manager
@@ -431,30 +457,5 @@ export class ReferralService {
         tokenType,
       };
     });
-  }
-
-  private async getPreviousLevelUserIds(
-    referrerId: string,
-    level: number,
-  ): Promise<string[]> {
-    if (level === 1) return [referrerId];
-
-    const level1Refs = await this.referralRepository.findAll({
-      where: { referrer: { id: referrerId } },
-      relations: ['referee'],
-    });
-
-    if (level === 2) return level1Refs.map((r) => r.referee.id);
-
-    const level2Refs: string[] = [];
-    for (const ref of level1Refs) {
-      const subRefs = await this.referralRepository.findAll({
-        where: { referrer: { id: ref.referee.id } },
-        relations: ['referee'],
-      });
-      level2Refs.push(...subRefs.map((s) => s.referee.id));
-    }
-
-    return level2Refs;
   }
 }

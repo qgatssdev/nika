@@ -1,4 +1,10 @@
-import { IsNumber, IsNotEmpty, IsUUID, IsEnum } from 'class-validator';
+import {
+  IsNumber,
+  IsNotEmpty,
+  IsUUID,
+  IsEnum,
+  IsOptional,
+} from 'class-validator';
 import { TokenTypeEnum } from 'src/libs/common/constants/constants';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -8,18 +14,23 @@ export class TradeWebhookDto {
   @IsNotEmpty()
   userId: string;
 
-  @ApiProperty({ example: 100000 })
+  @ApiProperty({ example: 1000 })
   @IsNumber()
   @IsNotEmpty()
   volume: number;
 
-  @ApiProperty({ example: 1000 })
+  @ApiProperty({ example: 3.2, required: false })
+  @IsOptional()
   @IsNumber()
-  @IsNotEmpty()
-  fees: number;
+  fees?: number;
 
-  @ApiProperty({ example: TokenTypeEnum.USDT, enum: TokenTypeEnum })
+  @ApiProperty({ example: TokenTypeEnum.ETH, enum: TokenTypeEnum })
   @IsEnum(TokenTypeEnum)
   @IsNotEmpty()
-  tokenType: TokenTypeEnum;
+  payTokenType: TokenTypeEnum;
+
+  @ApiProperty({ example: TokenTypeEnum.USDC, enum: TokenTypeEnum })
+  @IsEnum(TokenTypeEnum)
+  @IsNotEmpty()
+  getTokenType: TokenTypeEnum;
 }

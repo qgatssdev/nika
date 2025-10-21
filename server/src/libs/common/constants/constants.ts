@@ -12,7 +12,7 @@ export interface FeeBreakdown {
 export const CREATED_AT_COLUMN = 'createdAt';
 
 export enum TokenTypeEnum {
-  USDT = 'USDT',
+  USDC = 'USDC',
   ETH = 'ETH',
   SOL = 'SOL',
   BTC = 'BTC',

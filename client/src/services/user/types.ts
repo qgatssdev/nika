@@ -1,3 +1,5 @@
+import { TokenSymbol } from '@/utils/tokenPrices';
+
 export type CustomCommissionStructure = {
   isKOL: boolean;
   directCommission: number;
@@ -25,7 +27,7 @@ export type Claim = {
 
 export type UserWallet = {
   id: string;
-  tokenType: string;
+  tokenType: TokenSymbol;
   balance: number;
   claimedAmount: number;
 };

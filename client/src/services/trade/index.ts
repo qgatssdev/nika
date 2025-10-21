@@ -1,16 +1,9 @@
 import apiHandler from '../api';
-import { baseUrl } from '../index.route';
+import { ClaimCommissionPayload, TradeWebhookPayload } from './types';
+import TradeRoute from './trade.route';
 
-export type TradeWebhookPayload = {
-  userId: string;
-  volume: number;
-  fees: number;
-  tokenType: string; // server enum TokenTypeEnum
-};
+export const performTrade = async (payload: TradeWebhookPayload) =>
+  apiHandler.post(TradeRoute.webhook, payload);
 
-export const TradeRoutes = {
-  webhook: `${baseUrl}/trade/webhook`,
-};
-
-export const postTradeWebhook = async (payload: TradeWebhookPayload) =>
-  apiHandler.post(TradeRoutes.webhook, payload);
+export const claimCommission = async (payload: ClaimCommissionPayload) =>
+  apiHandler.post(TradeRoute.claim, payload);

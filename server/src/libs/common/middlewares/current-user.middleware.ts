@@ -3,9 +3,10 @@ import { Request, Response, NextFunction } from 'express';
 import * as jwt from 'jsonwebtoken';
 import { Config } from 'src/config';
 import { UserRepository } from 'src/modules/auth/repository/user.repository';
+import { User } from 'src/modules/auth/entity/user.entity';
 
 interface RequestWithUser extends Request {
-  user?: any;
+  user?: User;
 }
 
 @Injectable()

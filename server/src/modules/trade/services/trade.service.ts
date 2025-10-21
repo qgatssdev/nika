@@ -30,7 +30,7 @@ export class TradeService {
   private readonly userRepository: UserRepository;
 
   public async processTradeWebhook(data: TradeWebhookDto) {
-    const { userId, volume, fees, tokenType } = data;
+    const { userId, volume, fees = 0, payTokenType, getTokenType } = data;
 
     const user = await this.userRepository.findOne({
       where: { id: userId },
@@ -38,14 +38,16 @@ export class TradeService {
     });
 
     if (!user) throw new NotFoundException('User not found');
-    if (volume <= 0) throw new BadRequestException('Invalid trade volume');
-    if (fees <= 0) throw new BadRequestException('Invalid fee amount');
-    if (!tokenType) throw new BadRequestException('Invalid token type');
+    if (volume <= 0) throw new BadRequestException('Invalid volume');
+    if (!payTokenType || !getTokenType)
+      throw new BadRequestException('Invalid token types');
+    if (payTokenType === getTokenType)
+      throw new BadRequestException('Tokens must differ');
 
     const feeRate = fees / volume;
 
     this.logger.log(
-      `User ${user.email} traded volume $${volume} (fee rate: ${feeRate * 100}%)`,
+      `User ${user.email} traded ${volume} ${payTokenType} → ${getTokenType} (fee rate: ${feeRate * 100}%)`,
     );
 
     const breakdown = await this.referralService.calculateFeeBreakdown(
@@ -67,10 +69,14 @@ export class TradeService {
 
     // Perform commission records creation and wallet increments atomically
     await this.dataSource.transaction(async (manager) => {
+      // 1) Deduct from payer wallet
+      await this.decrementBalance(user.id, payTokenType, volume, manager);
+
+      // 2) Credit receiver wallet with cashback in get token
       if (breakdown.cashback > 0) {
         await this.incrementBalance(
           user.id,
-          tokenType,
+          getTokenType,
           breakdown.cashback,
           manager,
         );
@@ -85,13 +91,13 @@ export class TradeService {
           sourceUser: { id: user.id },
           level: idx + 1,
           amount: Number(level.amount).toFixed(8),
-          tokenType,
+          tokenType: getTokenType,
           isClaimed: false,
         });
 
         await this.incrementBalance(
           level.userId,
-          tokenType,
+          getTokenType,
           level.amount,
           manager,
         );
@@ -102,7 +108,7 @@ export class TradeService {
     this.logger.log(`Treasury distributed: ${breakdown.treasury}`);
 
     this.logger.log(
-      `Processed trade for ${user.email}: volume $${volume}, fees $${fees} distributed`,
+      `Processed trade for ${user.email}: volume ${volume} ${payTokenType} → ${getTokenType}, fees $${fees} distributed`,
     );
 
     return {
@@ -131,6 +137,27 @@ export class TradeService {
       })
       .onConflict(
         `("userId", "tokenType") DO UPDATE SET "balance" = "user_wallets"."balance" + EXCLUDED."balance"`,
+      )
+      .execute();
+  }
+
+  private async decrementBalance(
+    userId: string,
+    tokenType: string,
+    amount: number,
+    manager: EntityManager,
+  ) {
+    await manager
+      .createQueryBuilder()
+      .insert()
+      .into(UserWallet)
+      .values({
+        user: { id: userId },
+        tokenType,
+        balance: 0,
+      })
+      .onConflict(
+        `("userId", "tokenType") DO UPDATE SET "balance" = GREATEST("user_wallets"."balance" - ${amount}, 0)`,
       )
       .execute();
   }
