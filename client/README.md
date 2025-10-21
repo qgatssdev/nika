@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Nika Client
 
-## Getting Started
+_(Next.js 15 · React 19 · TypeScript)_
 
-First, run the development server:
+---
+
+### Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+yarn install
+yarn dev           # http://localhost:3000
+
+# quality gates
+yarn tsc --noEmit  # type-check only
+yarn lint          # eslint
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create an `.env.local` from `.env.example` and fill the required keys (see Env section).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Project layout
 
-## Learn More
+```
+src
+ ├─ app/                     # Next.js app router
+ │  ├─ (auth)/               # unauthenticated flows (login, signup…)
+ │  └─ (main-app)/           # authenticated area (dashboard, etc.)
+ │     └─ .../components/    # route-scoped UI
+ │     └─ .../mutations/     # route-scoped mutations (POST/PUT)
+ │     └─ .../queries/       # route-scoped queries (GET)
+ │
+ ├─ components/              # reusable UI widgets (inputs, buttons, etc.)
+ ├─ services/                # single source of truth for API
+ │  ├─ api/                  # axios instance with auth headers
+ │  └─ <domain>/             # auth, trade, user, ...
+ │     ├─ types.ts           # DTOs / view-models
+ │     ├─ index.ts           # raw axios calls
+ │     ├─ queries.ts         # TanStack Query hooks
+ │     └─ mutations.ts       # TanStack Mutation hooks
+ ├─ hooks/                   # global React hooks
+ ├─ utils/                   # pure helpers (no React)
+ ├─ validations/             # Yup schemas (forms)
+ ├─ config/                  # runtime config (API_URL, etc.)
+ └─ lib/                     # framework helpers (metadata, etc.)
 
-To learn more about Next.js, take a look at the following resources:
+providers.tsx                # React Query provider / toaster
+middleware.ts                # auth/session middleware
+routes.ts                    # central route map
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+> Components never import axios directly; they consume hooks from `*/mutations` or `*/queries`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+#### Route-based feature folders
 
-## Deploy on Vercel
+Each page or sub-route owns its local UI and data hooks inside its folder. Start local while building a feature; when reused elsewhere, promote it to `src/services/<domain>/` or `src/components/`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Guidelines (same architecture as yadsale-frontend):
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Start local in the route's `queries/` and `mutations/` folders.
+2. Promote on reuse:
+   - Shared data hooks → `src/services/<domain>/`
+   - Pure UI widgets → `src/components/`
+3. Do not duplicate route-level hooks once a shared service exists; import the shared version instead.
+4. Auth-related mutations live under `auth/mutations` when shared across auth routes.
+
+---
+
+### API flow (example)
+
+1. Raw call
+
+```ts
+// src/services/trade/index.ts
+export const performTrade = (payload: TradeWebhookPayload) =>
+  apiHandler.post(TradeRoute.webhook, payload);
+```
+
+2. Mutation hook
+
+```ts
+// src/services/trade/mutations.ts
+export const usePerformTrade = () => useMutation({ mutationFn: performTrade });
+```
+
+3. Component
+
+```tsx
+const { mutate: performTrade, isPending } = usePerformTrade();
+
+<Button onClick={() => performTrade(payload)} loading={isPending}>
+  Trade
+</Button>;
+```
+
+---
+
+### Forms and validation
+
+- Forms use Formik
+- Validation uses Yup schemas in `src/validations/*`
+
+---
+
+### Env variables (excerpt)
+
+| key       | purpose          |
+| --------- | ---------------- |
+| `API_URL` | Backend base URL |
+
+---
+
+### Scripts
+
+| script            | purpose                  |
+| ----------------- | ------------------------ |
+| `dev`             | run Next dev server      |
+| `build` / `start` | production build & start |
+| `lint`            | run eslint               |
+
+---
+
+### Deployment
+
+```bash
+yarn build
+yarn start   # serves on $PORT (3000 default)
+```
+
+The app is SSR-compatible and uses React Query for data fetching with auth token automatically attached via the axios interceptor in `src/services/api`.
