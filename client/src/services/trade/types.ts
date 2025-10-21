@@ -1,13 +1,13 @@
-import { TokenSymbol } from '@/utils/tokenPrices';
+import { TokenTypeEnum } from '@/utils/tokenPrices';
 
 export type TradeWebhookPayload = {
   userId: string;
   volume: number;
   fees?: number;
-  payTokenType: TokenSymbol;
-  getTokenType: TokenSymbol;
+  payTokenType: TokenTypeEnum;
+  getTokenType: TokenTypeEnum;
 };
 
 export type ClaimCommissionPayload = {
-  tokenType: TokenSymbol;
+  tokenType: TokenTypeEnum;
 };

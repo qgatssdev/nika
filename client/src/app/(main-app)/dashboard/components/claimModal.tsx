@@ -4,8 +4,8 @@ import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useClaimCommission } from '../mutations';
-import { TokenSymbol } from '@/utils/tokenPrices';
 import { useGetClaimable } from '../queries';
+import { TokenTypeEnum } from '@/utils/tokenPrices';
 
 type ClaimModalProps = {
   onClose: () => void;
@@ -13,7 +13,7 @@ type ClaimModalProps = {
 
 const ClaimModal: React.FC<ClaimModalProps> = ({ onClose }) => {
   const queryClient = useQueryClient();
-  const [loadingToken, setLoadingToken] = useState<TokenSymbol | null>(null);
+  const [loadingToken, setLoadingToken] = useState<TokenTypeEnum | null>(null);
   const { data: claimable, isLoading, isRefetching } = useGetClaimable();
 
   const { mutate: claimCommission } = useClaimCommission(
@@ -28,7 +28,7 @@ const ClaimModal: React.FC<ClaimModalProps> = ({ onClose }) => {
     }
   );
 
-  const handleClaim = (tokenType: TokenSymbol) => {
+  const handleClaim = (tokenType: TokenTypeEnum) => {
     if (loadingToken) return;
     setLoadingToken(tokenType);
     claimCommission(

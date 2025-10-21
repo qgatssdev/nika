@@ -1,10 +1,10 @@
-import { TokenSymbol } from '@/utils/tokenPrices';
+import { TokenTypeEnum } from '@/utils/tokenPrices';
 
 export type GetClaimablePayload = {
-  tokenType: TokenSymbol;
+  tokenType: TokenTypeEnum;
 };
 
 export type GetClaimableResponse = {
-  tokenType: TokenSymbol;
+  tokenType: TokenTypeEnum;
   amount: number;
 }[];

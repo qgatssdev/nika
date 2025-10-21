@@ -1,4 +1,4 @@
-import { TokenSymbol } from '@/utils/tokenPrices';
+import { TokenTypeEnum } from '@/utils/tokenPrices';
 
 export type CustomCommissionStructure = {
   isKOL: boolean;
@@ -27,7 +27,7 @@ export type Claim = {
 
 export type UserWallet = {
   id: string;
-  tokenType: TokenSymbol;
+  tokenType: TokenTypeEnum;
   balance: number;
   claimedAmount: number;
 };
